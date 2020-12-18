@@ -28,17 +28,39 @@ type ClusterVersionSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// Foo is an example field of ClusterVersion. Edit ClusterVersion_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	// +kubebuilder:validation:MinItems=2
+	Clusters    []Cluster   `json:"clusters,omitempty"`
+	OpsEndpoint OpsEndpoint `json:"opsEndpoint"`
+
+	// +kubebuilder:validation:Minimum=1
+	RequiredAvailableCount int `json:"requiredAvailableCount"`
+}
+
+// Cluster defines the cluster spec
+// ID is specific provider's cluster id.
+// For instance, GKE represents "projects/%s/locations/%s/clusters/%s"
+type Cluster struct {
+	ID      string `json:"id"`
+	Version string `json:"version"`
+}
+
+// OpsEndpoint defines the endpoint spec for the gRPC server which performs specific operations.
+type OpsEndpoint struct {
+	Endpoint string `json:"endpoint"`
+	Insecure bool   `json:"insecure"`
 }
 
 // ClusterVersionStatus defines the observed state of ClusterVersion
 type ClusterVersionStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
+	ClusterID     string `json:"ClusterID"`
+	OperationID   string `json:"OperationID"`
+	OperationType string `json:"OperationType"`
 }
 
 // +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
 
 // ClusterVersion is the Schema for the clusterversions API
 type ClusterVersion struct {
@@ -60,4 +82,10 @@ type ClusterVersionList struct {
 
 func init() {
 	SchemeBuilder.Register(&ClusterVersion{}, &ClusterVersionList{})
+}
+
+func (in *ClusterVersionStatus) ResetStatus() {
+	in.OperationID = ""
+	in.OperationType = ""
+	in.ClusterID = ""
 }
