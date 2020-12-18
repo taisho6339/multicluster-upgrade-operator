@@ -1,0 +1,49 @@
+name: test
+on:
+  pull_request:
+    paths-ignore: [ '**.md' ]
+  push:
+    branches:
+      - 'master'
+    paths-ignore: [ '**.md' ]
+env:
+  go-version: 1.13
+  cache-version: 1
+jobs:
+  test:
+    name: Run tests
+    runs-on: ubuntu-18.04
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-go@v2
+        with:
+          go-version: ${{ env.go-version }}
+      - uses: actions/cache@v2
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+      - name: Ensure go.mod is already tidied
+        run: go mod tidy && git diff -s --exit-code go.sum
+      - name: Run golangci-lint with reviewdog
+        uses: reviewdog/action-golangci-lint@v1.14.1
+        with:
+          golangci_lint_flags: "--timeout=3m0s --fix"
+          level: warning
+          filter_mode: nofilter
+          reporter: github-pr-review
+      - name: Install kubebuilder
+        run: |
+          os=$(go env GOOS)
+          arch=$(go env GOARCH)
+          curl -L https://go.kubebuilder.io/dl/2.3.1/${os}/${arch} | tar -xz -C /tmp/
+          sudo mv /tmp/kubebuilder_2.3.1_${os}_${arch} /usr/local/kubebuilder
+      - name: Install kustomize
+        run: |
+          os=$(go env GOOS)
+          arch=$(go env GOARCH)
+          curl -L https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize/v3.7.0/kustomize_v3.7.0_${os}_${arch}.tar.gz | tar -xz -C /tmp/
+          sudo mv /tmp/kustomize /usr/local/bin/
+      - run: make test
+      - run: make validate-generated
