@@ -101,7 +101,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: muo-leader-election-role
-  namespace: kube-system
+  namespace: multicluster-system
 rules:
 - apiGroups:
   - ""
@@ -189,7 +189,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: muo-leader-election-rolebinding
-  namespace: kube-system
+  namespace: multicluster-system
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
@@ -197,7 +197,7 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: default
-  namespace: kube-system
+  namespace: multicluster-system
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -210,7 +210,7 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: default
-  namespace: kube-system
+  namespace: multicluster-system
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -223,7 +223,7 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: default
-  namespace: kube-system
+  namespace: multicluster-system
 ---
 apiVersion: v1
 kind: Service
@@ -231,7 +231,7 @@ metadata:
   labels:
     control-plane: controller-manager
   name: muo-controller-manager-metrics-service
-  namespace: kube-system
+  namespace: multicluster-system
 spec:
   ports:
   - name: https
@@ -244,7 +244,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: muo-webhook-service
-  namespace: kube-system
+  namespace: multicluster-system
 spec:
   ports:
   - port: 443
@@ -258,7 +258,7 @@ metadata:
   labels:
     control-plane: controller-manager
   name: muo-controller-manager
-  namespace: kube-system
+  namespace: multicluster-system
 spec:
   replicas: 1
   selector:
@@ -313,11 +313,11 @@ apiVersion: cert-manager.io/v1alpha2
 kind: Certificate
 metadata:
   name: muo-serving-cert
-  namespace: kube-system
+  namespace: multicluster-system
 spec:
   dnsNames:
-  - muo-webhook-service.kube-system.svc
-  - muo-webhook-service.kube-system.svc.cluster.local
+  - muo-webhook-service.multicluster-system.svc
+  - muo-webhook-service.multicluster-system.svc.cluster.local
   issuerRef:
     kind: Issuer
     name: muo-selfsigned-issuer
@@ -327,7 +327,7 @@ apiVersion: cert-manager.io/v1alpha2
 kind: Issuer
 metadata:
   name: muo-selfsigned-issuer
-  namespace: kube-system
+  namespace: multicluster-system
 spec:
   selfSigned: {}
 ---
@@ -335,7 +335,7 @@ apiVersion: admissionregistration.k8s.io/v1beta1
 kind: MutatingWebhookConfiguration
 metadata:
   annotations:
-    cert-manager.io/inject-ca-from: kube-system/muo-serving-cert
+    cert-manager.io/inject-ca-from: multicluster-system/muo-serving-cert
   creationTimestamp: null
   name: muo-mutating-webhook-configuration
 webhooks:
@@ -343,7 +343,7 @@ webhooks:
     caBundle: Cg==
     service:
       name: muo-webhook-service
-      namespace: kube-system
+      namespace: multicluster-system
       path: /mutate-multicluster-ops-io-v1-clusterversion
   failurePolicy: Fail
   name: mclusterversion.kb.io
@@ -362,7 +362,7 @@ apiVersion: admissionregistration.k8s.io/v1beta1
 kind: ValidatingWebhookConfiguration
 metadata:
   annotations:
-    cert-manager.io/inject-ca-from: kube-system/muo-serving-cert
+    cert-manager.io/inject-ca-from: multicluster-system/muo-serving-cert
   creationTimestamp: null
   name: muo-validating-webhook-configuration
 webhooks:
@@ -370,7 +370,7 @@ webhooks:
     caBundle: Cg==
     service:
       name: muo-webhook-service
-      namespace: kube-system
+      namespace: multicluster-system
       path: /validate-multicluster-ops-io-v1-clusterversion
   failurePolicy: Fail
   name: vclusterversion.kb.io
