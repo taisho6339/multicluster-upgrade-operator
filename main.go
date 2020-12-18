@@ -18,14 +18,20 @@ package main
 
 import (
 	"flag"
+	"os"
+	"time"
+
+	"github.com/taisho6339/multicluster-upgrade-operator/pkg/ops"
+
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
-	"os"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	multiclusteropsv1 "github.com/taisho6339/multicluster-upgrade-operator/api/v1"
+	multiclusteropsiov1 "github.com/taisho6339/multicluster-upgrade-operator/api/v1"
+	opsmcv1 "github.com/taisho6339/multicluster-upgrade-operator/api/v1"
+	opsv1 "github.com/taisho6339/multicluster-upgrade-operator/api/v1"
 	"github.com/taisho6339/multicluster-upgrade-operator/controllers"
 	// +kubebuilder:scaffold:imports
 )
@@ -38,27 +44,35 @@ var (
 func init() {
 	_ = clientgoscheme.AddToScheme(scheme)
 
-	_ = multiclusteropsv1.AddToScheme(scheme)
+	_ = opsv1.AddToScheme(scheme)
+	_ = opsmcv1.AddToScheme(scheme)
+	_ = multiclusteropsiov1.AddToScheme(scheme)
 	// +kubebuilder:scaffold:scheme
 }
 
 func main() {
 	var metricsAddr string
 	var enableLeaderElection bool
+	var debug bool
+	var syncPeriodSeconds int
+	flag.IntVar(&syncPeriodSeconds, "sync-period-seconds", 60, "The period controller will sync after when no event occurs.")
 	flag.StringVar(&metricsAddr, "metrics-addr", ":8080", "The address the metric endpoint binds to.")
 	flag.BoolVar(&enableLeaderElection, "enable-leader-election", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
+	flag.BoolVar(&debug, "debug", false, "Enable debug mode. if debug is true, controller outputs logs of debug level.")
 	flag.Parse()
 
-	ctrl.SetLogger(zap.New(zap.UseDevMode(true)))
+	ctrl.SetLogger(zap.New(zap.UseDevMode(debug)))
 
+	sp := time.Second * time.Duration(syncPeriodSeconds)
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:             scheme,
 		MetricsBindAddress: metricsAddr,
 		Port:               9443,
 		LeaderElection:     enableLeaderElection,
 		LeaderElectionID:   "6807cfeb.io",
+		SyncPeriod:         &sp,
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
@@ -66,14 +80,16 @@ func main() {
 	}
 
 	if err = (&controllers.ClusterVersionReconciler{
-		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("ClusterVersion"),
-		Scheme: mgr.GetScheme(),
+		Client:   mgr.GetClient(),
+		Log:      ctrl.Log.WithName("controllers").WithName("ClusterVersion"),
+		Scheme:   mgr.GetScheme(),
+		Recorder: mgr.GetEventRecorderFor("clusterversion_controller"),
+		Operator: ops.NewPluginOperator(ops.DefaultNewFunc),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ClusterVersion")
 		os.Exit(1)
 	}
-	if err = (&multiclusteropsv1.ClusterVersion{}).SetupWebhookWithManager(mgr); err != nil {
+	if err = (&multiclusteropsiov1.ClusterVersion{}).SetupWebhookWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create webhook", "webhook", "ClusterVersion")
 		os.Exit(1)
 	}

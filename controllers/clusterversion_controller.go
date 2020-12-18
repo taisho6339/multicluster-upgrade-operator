@@ -29,13 +29,11 @@ import (
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"time"
 )
 
 const (
 	reasonOperationFailed    = "OperationFailed"
 	reasonClusterUnavailable = "ClusterUnavailable"
-	defaultRequeueDuration   = time.Second * 60
 )
 
 type operationFunc func() (ctrl.Result, error)
@@ -74,7 +72,7 @@ func (r *ClusterVersionReconciler) reconcileOperationStatus(ctx context.Context,
 	status, err := r.Operator.GetOperationStatus(ctx, *obj)
 	if err != nil {
 		log.Error(err, "failed to get operation status")
-		return ctrl.Result{RequeueAfter: defaultRequeueDuration}, err
+		return ctrl.Result{}, nil
 	}
 
 	switch status {
@@ -112,7 +110,7 @@ func (r *ClusterVersionReconciler) reconcileClusterVersion(ctx context.Context, 
 		cv, err := r.Operator.GetClusterVersion(ctx, *obj, cluster)
 		if err != nil {
 			log.Error(err, "get cluster version")
-			return ctrl.Result{RequeueAfter: defaultRequeueDuration}, err
+			return ctrl.Result{}, nil
 		}
 		if cv.Master.Version != cluster.Version {
 			return r.reconcileMasterVersion(ctx, obj, cluster, log)
@@ -125,13 +123,11 @@ func (r *ClusterVersionReconciler) reconcileClusterVersion(ctx context.Context, 
 		cs, err := r.Operator.GetClusterStatus(ctx, *obj, cluster)
 		if err != nil {
 			log.Error(err, "failed to get cluster status")
-			return ctrl.Result{RequeueAfter: defaultRequeueDuration}, err
+			return ctrl.Result{}, nil
 		}
 		if !cs.Available {
-			err := fmt.Errorf("cluster %s is unavailable", cluster.ID)
-			log.Error(err, err.Error())
-			r.Recorder.Event(obj, corev1.EventTypeWarning, reasonClusterUnavailable, err.Error())
-			return ctrl.Result{RequeueAfter: defaultRequeueDuration}, err
+			log.Info(fmt.Sprintf("cluster %s hasn't been available yet", cluster.ID))
+			return ctrl.Result{}, nil
 		}
 		if cs.Type == ops.ClusterStatusServiceOut {
 			return r.serviceIn(ctx, obj, cluster, log)
@@ -144,7 +140,7 @@ func (r *ClusterVersionReconciler) withServiceOut(ctx context.Context, obj *opsv
 	cs, err := r.Operator.GetClusterStatus(ctx, *obj, cluster)
 	if err != nil {
 		log.Error(err, "failed to get cluster status")
-		return ctrl.Result{RequeueAfter: defaultRequeueDuration}, err
+		return ctrl.Result{}, nil
 	}
 	if cs.Type == ops.ClusterStatusServiceOut {
 		return op()
@@ -191,7 +187,7 @@ func (r *ClusterVersionReconciler) serviceIn(ctx context.Context, obj *opsv1.Clu
 	result, err := r.Operator.ServiceIn(ctx, *obj, cluster)
 	if err != nil {
 		log.Error(err, "failed to service in")
-		return ctrl.Result{RequeueAfter: defaultRequeueDuration}, err
+		return ctrl.Result{}, nil
 	}
 	obj.Status.ClusterID = cluster.ID
 	obj.Status.OperationID = result.OperationID
@@ -203,7 +199,7 @@ func (r *ClusterVersionReconciler) serviceOut(ctx context.Context, obj *opsv1.Cl
 	result, err := r.Operator.ServiceOut(ctx, *obj, cluster)
 	if err != nil {
 		log.Error(err, "failed to service out")
-		return ctrl.Result{RequeueAfter: defaultRequeueDuration}, err
+		return ctrl.Result{}, nil
 	}
 	obj.Status.ClusterID = cluster.ID
 	obj.Status.OperationID = result.OperationID
@@ -215,7 +211,7 @@ func (r *ClusterVersionReconciler) upgradeMaster(ctx context.Context, obj *opsv1
 	result, err := r.Operator.UpgradeMaster(ctx, *obj, cluster)
 	if err != nil {
 		log.Error(err, "failed to upgrade master")
-		return ctrl.Result{RequeueAfter: defaultRequeueDuration}, err
+		return ctrl.Result{}, nil
 	}
 	obj.Status.ClusterID = cluster.ID
 	obj.Status.OperationID = result.OperationID
@@ -227,7 +223,7 @@ func (r *ClusterVersionReconciler) upgradeNodePool(ctx context.Context, obj *ops
 	result, err := r.Operator.UpgradeNodePool(ctx, *obj, cluster, nodePoolID)
 	if err != nil {
 		log.Error(err, "failed to upgrade node pool")
-		return ctrl.Result{RequeueAfter: defaultRequeueDuration}, err
+		return ctrl.Result{}, nil
 	}
 	obj.Status.ClusterID = cluster.ID
 	obj.Status.OperationID = result.OperationID
