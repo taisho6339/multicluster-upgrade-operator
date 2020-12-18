@@ -1,0 +1,7 @@
+apiVersion: multicluster-ops.io/v1
+kind: ClusterVersion
+metadata:
+  name: clusterversion-sample
+spec:
+  # Add fields here
+  foo: bar

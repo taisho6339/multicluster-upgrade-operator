@@ -1,0 +1,7 @@
+domain: io
+repo: github.com/taisho6339/multicluster-upgrade-operator
+resources:
+- group: multicluster-ops
+  kind: ClusterVersion
+  version: v1
+version: "2"
