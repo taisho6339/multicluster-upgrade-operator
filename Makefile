@@ -14,7 +14,7 @@ endif
 all: manager
 
 # Run tests
-test: generate fmt vet manifests
+test: generate fmt vet test-lint manifests
 	go test ./... -coverprofile cover.out
 
 # Build manager binary
@@ -42,6 +42,9 @@ deploy: manifests
 manifests: controller-gen
 	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=manager-role webhook paths="./..." output:crd:artifacts:config=config/crd/bases
 
+generate-install-manifests: manifests
+	kustomize build config/default > ./manifests/install.yaml
+
 # Run go fmt against code
 fmt:
 	go fmt ./...
@@ -49,6 +52,12 @@ fmt:
 # Run go vet against code
 vet:
 	go vet ./...
+
+test-lint:
+ifeq (, $(shell which eventuallycheck))
+	go get -u github.com/cybozu/neco-containers/golang/analyzer/cmd/eventuallycheck
+endif
+	eventuallycheck ./controllers/
 
 # Generate code
 generate: controller-gen
@@ -78,3 +87,8 @@ CONTROLLER_GEN=$(GOBIN)/controller-gen
 else
 CONTROLLER_GEN=$(shell which controller-gen)
 endif
+
+generate-all: generate manifests generate-install-manifests
+
+validate-generated: generate-all
+	git diff --exit-code --name-only manifests/
