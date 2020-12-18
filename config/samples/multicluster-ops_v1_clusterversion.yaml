@@ -3,5 +3,12 @@ kind: ClusterVersion
 metadata:
   name: clusterversion-sample
 spec:
-  # Add fields here
-  foo: bar
+  requiredAvailableCount: 1
+  opsEndpoint:
+    endpoint: "your-plugin-server.kube-system.svc.cluster.local:39000"
+    insecure: true
+  clusters:
+    - id: projects/your-project-id/locations/asia-northeast1/clusters/sample-1
+      version: 1.16.15-gke.4901
+    - id: projects/your-project-id/locations/asia-northeast1/clusters/sample-2
+      version: 1.16.15-gke.4901
