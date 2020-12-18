@@ -17,20 +17,21 @@ limitations under the License.
 package controllers
 
 import (
-	"path/filepath"
-	"testing"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
+	"path/filepath"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	"sigs.k8s.io/controller-runtime/pkg/envtest/printer"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	"testing"
+	"time"
 
-	multiclusteropsv1 "github.com/taisho6339/multicluster-upgrade-operator/api/v1"
+	opsv1 "github.com/taisho6339/multicluster-upgrade-operator/api/v1"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -40,9 +41,14 @@ import (
 var cfg *rest.Config
 var k8sClient client.Client
 var testEnv *envtest.Environment
+var stopCh chan struct{}
+var operator = newMockOperator()
+var syncPeriod = time.Millisecond * 100
 
 func TestAPIs(t *testing.T) {
 	RegisterFailHandler(Fail)
+
+	SetDefaultEventuallyTimeout(5 * time.Second)
 
 	RunSpecsWithDefaultAndCustomReporters(t,
 		"Controller Suite",
@@ -62,7 +68,7 @@ var _ = BeforeSuite(func(done Done) {
 	Expect(err).ToNot(HaveOccurred())
 	Expect(cfg).ToNot(BeNil())
 
-	err = multiclusteropsv1.AddToScheme(scheme.Scheme)
+	err = opsv1.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 
 	// +kubebuilder:scaffold:scheme
@@ -71,11 +77,37 @@ var _ = BeforeSuite(func(done Done) {
 	Expect(err).ToNot(HaveOccurred())
 	Expect(k8sClient).ToNot(BeNil())
 
+	// start controller manager
+	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
+		Scheme:     scheme.Scheme,
+		SyncPeriod: &syncPeriod,
+	})
+	Expect(err).ToNot(HaveOccurred())
+
+	rc := &ClusterVersionReconciler{
+		Client:   mgr.GetClient(),
+		Log:      ctrl.Log.WithName("controllers").WithName("ClusterVersion"),
+		Scheme:   mgr.GetScheme(),
+		Recorder: mgr.GetEventRecorderFor("clusterversion_controller"),
+		Operator: operator,
+	}
+	err = rc.SetupWithManager(mgr)
+	Expect(err).ToNot(HaveOccurred())
+
+	stopCh = make(chan struct{})
+	go func() {
+		err := mgr.Start(stopCh)
+		if err != nil {
+			panic(err)
+		}
+	}()
+
 	close(done)
 }, 60)
 
 var _ = AfterSuite(func() {
 	By("tearing down the test environment")
+	close(stopCh)
 	err := testEnv.Stop()
 	Expect(err).ToNot(HaveOccurred())
 })
