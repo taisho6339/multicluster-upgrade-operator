@@ -36,7 +36,8 @@ communication with it via gRPC.
 ### Install
 
 ```bash
-//TODO: Insert later
+# kubernetes v1.16 or later
+kubectl apply -f https://raw.githubusercontent.com/taisho6339/multicluster-upgrade-operator/v0.0.1/manifests/install.yaml
 ```
 
 ### ClusterVersion Resource
