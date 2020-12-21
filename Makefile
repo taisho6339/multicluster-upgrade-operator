@@ -1,6 +1,6 @@
 
 # Image URL to use all building/pushing image targets
-IMG ?= taisho6339/multicluster-upgrade-operator:v0.0.1-1608272600
+IMG ?= ghcr.io/taisho6339/multicluster-upgrade-operator:v0.0.1
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
 CRD_OPTIONS ?= "crd:trivialVersions=true"
 
