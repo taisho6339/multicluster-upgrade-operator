@@ -4,7 +4,13 @@ Custom Kubernetes Controller for managing multi-cluster upgrading.
 
 This controller supports you to automate rolling upgrade clusters.
 
+This allows you to safely upgrade the cluster version and core workloads (e.g. istio).
+
+This operator supports operations of upgrading that cannot be handled by surge upgrades, etc.
+
 ## Overview
+
+This controller should run in a different cluster from operation target clusters.
 
 This controller is a plugin architecture.
 
@@ -13,9 +19,21 @@ The operations of the cluster depend on each cloud provider and so on.
 Therefore, you have to implement plugin-server according to a proto file, this controller would
 communication with it via gRPC.
 
+![architecture](./docs/multicluster-upgrade-operator.png)
+
 ![architecture](./docs/mco-overview.png)
 
+## Features
+
+- Rolling upgrade versions of clusters
+- Rolling upgrade core workloads (TBD)
+
 ## How to use
+
+### Prerequired
+
+- [cert-manager](https://cert-manager.io/docs/installation/kubernetes/)
+    - use for webhook server
 
 ### Install
 
