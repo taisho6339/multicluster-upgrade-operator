@@ -14,8 +14,8 @@ This controller is a plugin architecture.
 
 The operations of the cluster depend on each cloud provider and so on.
 
-Therefore, you have to implement plugin-server according to a proto file, this controller would
-communication with it via gRPC.
+Therefore, you have to implement plugin-server according to a [proto file](https://github.com/taisho6339/multicluster-upgrade-operator-proto), this controller would
+communicate with it via gRPC.
 
 ![architecture](./docs/multicluster-upgrade-operator.png)
 
