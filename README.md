@@ -6,8 +6,6 @@ This controller supports you to automate rolling upgrade clusters.
 
 This allows you to safely upgrade the cluster version and core workloads (e.g. istio).
 
-This operator supports operations of upgrading that cannot be handled by surge upgrades, etc.
-
 ## Overview
 
 This controller should run in a different cluster from operation target clusters.
